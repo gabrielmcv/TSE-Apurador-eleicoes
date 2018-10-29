@@ -2,6 +2,8 @@
 
 Sistema simples para contabilidade, audição básica e apuração dos dados eleitorais disponibilizados pelo TSE.
 
+![Imagem do uso](https://preview.ibb.co/eA4jFq/apuracao.png)
+
 ## Sobre o sistema
 
 Este é um sistema simples para obtenção de dados eleitorais divulgados pelo TSE. O código permite a visulização em tempo real da apuração em todos os estados, dos votos recebidos (com o estado procedente) e do resultado final da votação. Além dos dados de votação, as estatísticas gerais da eleição também ficam salvas no banco.
