@@ -1,0 +1,9 @@
+'use client';
+import {roundFetch} from '../lib/round-client';
+import {useEffect,useState} from 'react';
+import {CARGOS} from '../lib/tse';
+export default function ResultCoverage(){const [data,setData]=useState<{total:number;scopes:any[]}|null>(null),[error,setError]=useState('');
+ useEffect(()=>{let active=true;const controller=new AbortController();async function refresh(){try{const r=await roundFetch('/api/coleta',{cache:'no-store',signal:controller.signal});const d:any=await r.json();if(!r.ok)throw Error(d.error);if(active){setData(d);setError('');}}catch(e){if(active)setError(e instanceof Error?e.message:'Falha ao consultar cobertura.');}}refresh();return()=>{active=false;controller.abort();};},[]);
+ const received=data?.scopes.filter(s=>s.versions>0).length??0;
+ return <details className="coverage panel"><summary>Coleta nacional · {received} de {data?.total??137} fontes com versões arquivadas</summary><p className="history-help">Acervo do 1º turno - 2026: presidente, governador, senador e deputados, por UF e exterior. Coleta encerrada. Os horários abaixo registram as consultas realizadas.</p>{error&&<p role="alert" className="history-help">{error}</p>}<div className="history-table"><table><thead><tr><th>Abrangência</th><th>Cargo</th><th>Última consulta (Brasília)</th><th>Versões / situação</th><th>Consultar</th></tr></thead><tbody>{data?.scopes.map(s=><tr key={`${s.uf}:${s.cargo}`}><td>{s.uf==='ZZ'?'Exterior':s.uf}</td><td>{CARGOS[s.cargo]}</td><td>{s.checked?new Date(s.checked).toLocaleString('pt-BR',{timeZone:'America/Sao_Paulo'}):'Ainda não consultado'}</td><td>{s.versions} versões<small>{'Coleta encerrada'}</small></td><td><a href={`/painel?aba=logs&uf=${s.uf}&cargo=${s.cargo}`}>Logs desta fonte</a><a href={`/painel?aba=historico&uf=${s.uf}&cargo=${s.cargo}`}>Versões arquivadas</a></td></tr>)}</tbody></table></div></details>;
+}

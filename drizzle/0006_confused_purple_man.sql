@@ -1,0 +1,1 @@
+ALTER TABLE `municipal_jobs` ADD `ordinal` integer DEFAULT 0 NOT NULL;

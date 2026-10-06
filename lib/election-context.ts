@@ -1,0 +1,11 @@
+import {AsyncLocalStorage} from 'node:async_hooks';
+export const SECOND_START='2026-10-25T15:00:00-03:00';
+export type ElectionContext={round:1|2;president:string;state:string;pleito:string;governors:string[];configured:boolean;discoveryClosed?:boolean};
+const contexts=new AsyncLocalStorage<ElectionContext>();
+export const firstElection:ElectionContext={round:1,president:'6257',state:'6259',pleito:'3220',governors:[],configured:true};
+export const secondElection:ElectionContext={round:2,president:'6258',state:'6260',pleito:'',governors:[],configured:false};
+export const electionContext=()=>contexts.getStore()??firstElection;
+export const runElection=<T>(context:ElectionContext,run:()=>T)=>contexts.run(context,run);
+export const collectionClosed=()=>electionContext().round===1||Date.now()<Date.parse(SECOND_START);
+export const urnCollectionClosed=()=>electionContext().round===2&&(Date.now()<Date.parse(SECOND_START)||!electionContext().configured);
+export const electionInfo=()=>({id:`2026-${electionContext().round}`,year:2026,round:electionContext().round,label:`${electionContext().round}º turno - 2026`,status:electionContext().round===1?'archived':Date.now()<Date.parse(SECOND_START)?'scheduled':'collecting',startsAt:electionContext().round===2?SECOND_START:undefined});

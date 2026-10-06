@@ -1,0 +1,7 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import ts from 'typescript';import React from 'react';import {renderToStaticMarkup} from 'react-dom/server';
+process.chdir(new URL('..',import.meta.url).pathname);let source=ts.transpileModule(fs.readFileSync('app/SiteHeader.tsx','utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext,jsx:ts.JsxEmit.ReactJSX}}).outputText;
+source=source.replaceAll('"react/jsx-runtime"',JSON.stringify(import.meta.resolve('react/jsx-runtime'))).replaceAll("'lucide-react'",JSON.stringify(import.meta.resolve('lucide-react')));
+const {default:Header}=await import('data:text/javascript;base64,'+Buffer.from(source).toString('base64'));
+const labels={presidente:'Presidente',painel:'Outros resultados',exterior:'Exterior',auditoria:'Auditoria',historico:'Histórico',logs:'Logs',urnas:'Urnas'};
+for(const [active,label] of Object.entries(labels)){const html=renderToStaticMarkup(React.createElement(Header,{active,uf:'ES',cargo:'5'}));assert.equal((html.match(/aria-current="page"/g)||[]).length,1);assert.ok(html.includes(`aria-current="page">${label}</a>`));assert.ok(html.includes('aba=logs&amp;uf=ES&amp;cargo=5'));assert.ok(html.includes('uf=ZZ&amp;cargo=1'));}
+console.log('PASS: exactly one selected menu item for all seven sections; UF/cargo preserved across logs, history and audit; exterior remains president-only.');

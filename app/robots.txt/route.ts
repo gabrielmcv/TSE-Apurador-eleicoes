@@ -1,0 +1,1 @@
+export function GET(){return new Response('User-agent: *\nAllow: /\nDisallow: /api/acervo/encerrar\nDisallow: /api/coleta/automatica\nDisallow: /api/coleta/segundo-turno\nDisallow: /mcp\nSitemap: https://eleicoes.3ree.org/sitemap.xml\n',{headers:{'Content-Type':'text/plain; charset=utf-8','Cache-Control':'public, max-age=3600'}});}

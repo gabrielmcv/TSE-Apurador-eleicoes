@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import ts from 'typescript';import {DatabaseSync} from 'node:sqlite';
+const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');const compile=p=>ts.transpileModule(fs.readFileSync(p,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+const tse=url(compile('lib/tse.ts')),domestic=url(compile('lib/domestic-result.ts').replace("'./tse'",JSON.stringify(tse))),audit=url(compile('lib/audit.ts'));
+const mod=url(compile('lib/domestic-history.ts').replace("'./domestic-result'",JSON.stringify(domestic)).replace("'./audit'",JSON.stringify(audit)));
+const {UFS}=await import(tse),{domesticVersions,domesticHistory,domesticAudit,domesticSeries}=await import(mod);
+const sqlite=new DatabaseSync(':memory:');sqlite.exec('CREATE TABLE snapshots(id INTEGER PRIMARY KEY,uf TEXT,cargo TEXT,normalized TEXT,generated TEXT,generation_ms INTEGER,received TEXT,saved TEXT,hash TEXT)');
+const put=sqlite.prepare('INSERT INTO snapshots VALUES(?,?,?,?,?,?,?,?,?)');
+const result=v=>JSON.stringify({total:v,valid:v,blank:0,nullVotes:0,sections:1,totalSections:2,status:'Apuração em andamento',candidates:[{id:'1',name:'A',votes:v,percent:100,status:'',destination:'',elected:false}]});
+const add=(id,uf,v,g=id)=>put.run(id,uf,'1',result(v),'generation '+g,g,new Date(1791150000000+id*1000).toISOString(),'saved'+id,'hash'+id);
+UFS.forEach((uf,i)=>add(i+1,uf,10));add(28,'ZZ',9999);add(29,'BR',9999);add(30,'AC',15);add(31,'AC',1,1);add(32,'AC',12);
+const db={prepare:sql=>({bind:(...args)=>({all:async()=>({results:sqlite.prepare(sql).all(...args)})})})};
+let versions=await domesticVersions(db,99);assert.deepEqual(versions.map(v=>v.id),[32,30,27]);assert.deepEqual(versions.map(v=>v.result.valid),[272,275,270]);assert.equal(versions[1].composition.sources.find(s=>s.uf==='AC').snapshotId,30);assert.equal(versions[2].composition.sources.find(s=>s.uf==='AC').snapshotId,1);
+const params=new URLSearchParams('candidate=1');const events=await (await domesticAudit(params,db)).json();assert.deepEqual(events.records.map(r=>[r.kind,r.delta]),[['reducao',-3],['aumento',5],['base',null]]);
+assert.deepEqual((await (await domesticSeries(params,db)).json()).points.map(p=>p.votes),[270,275,272]);
+const history=await (await domesticHistory(new Request('https://test?exterior=0&id=30'),db)).json();assert.equal(history.result.valid,275);assert.equal(history.archive.composition.sources.length,27);add(33,'AC',50);assert.equal((await (await domesticHistory(new Request('https://test?id=30'),db)).json()).result.valid,275);assert.equal((await domesticHistory(new Request('https://test?id=28'),db)).status,404);assert.equal((await domesticHistory(new Request('https://test?before=bad'),db)).status,400);
+const page=await domesticVersions(db,33,2);assert.deepEqual(page.map(v=>v.id),[32,30]);assert.equal((await domesticVersions(db,page.at(-1).id,2))[0].id,27);
+console.log('PASS domestic history: no future sources, excludes BR/ZZ, ignores older generations, detects decreases, series/history consistency, frozen provenance and pagination.');

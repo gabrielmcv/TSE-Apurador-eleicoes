@@ -1,0 +1,115 @@
+{
+  "election": "6257",
+  "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/dados/br/br-c0001-e006257-u.json",
+  "sourceIdg": "1070425",
+  "photos": [
+    {
+      "sqcand": "280002551544",
+      "name": "FLAVIO BOLSONARO",
+      "url": "/candidate-photos/280002551544.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002551544.jpeg",
+      "sha256": "3f29c4846e3839944a2668cc4b663c1ca2b90fef846314f8fd4434a031d0a917",
+      "received": "2026-10-04T20:14:58.557839+00:00",
+      "bytes": 6753
+    },
+    {
+      "sqcand": "280002551932",
+      "name": "RONALDO CAIADO",
+      "url": "/candidate-photos/280002551932.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002551932.jpeg",
+      "sha256": "e6416f7d40c21eb67f98e71805222906d8996d23d8457cefe065cdc04d4cdfbd",
+      "received": "2026-10-04T20:14:58.591181+00:00",
+      "bytes": 5963
+    },
+    {
+      "sqcand": "280002542548",
+      "name": "LULA",
+      "url": "/candidate-photos/280002542548.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002542548.jpeg",
+      "sha256": "f3e9d937a40bc8d56fec508a44943bd032b9f5e27ac09abdc610b0d2a333ab19",
+      "received": "2026-10-04T20:14:58.575892+00:00",
+      "bytes": 6969
+    },
+    {
+      "sqcand": "280002552484",
+      "name": "CLARIANA BARAO",
+      "url": "/candidate-photos/280002552484.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002552484.jpeg",
+      "sha256": "79f3c2ffe5de99c7b2b87d99d32ce0dfdc29f4902d65ccdc8a05cf624ede7299",
+      "received": "2026-10-04T20:14:58.622807+00:00",
+      "bytes": 6787
+    },
+    {
+      "sqcand": "280002551975",
+      "name": "EDMILSON COSTA",
+      "url": "/candidate-photos/280002551975.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002551975.jpeg",
+      "sha256": "02286a8066748bf9f8ea1e72ef1f18eb9be7db9f49bf429c5ba43309d0518513",
+      "received": "2026-10-04T20:15:05.935489+00:00",
+      "bytes": 5390
+    },
+    {
+      "sqcand": "280002541457",
+      "name": "HERTZ DIAS",
+      "url": "/candidate-photos/280002541457.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002541457.jpeg",
+      "sha256": "05c10bf62f487b52f4f802829736bffc58b39daa882555a0cde7ddf58b31bcba",
+      "received": "2026-10-04T20:15:06.001692+00:00",
+      "bytes": 6731
+    },
+    {
+      "sqcand": "280002551547",
+      "name": "ESCRITOR AUGUSTO CURY",
+      "url": "/candidate-photos/280002551547.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002551547.jpeg",
+      "sha256": "7061d5d68a18e98ad96029588f33b0dd7bd0acc0bc4f546770a4f594ddccad93",
+      "received": "2026-10-04T20:15:05.992135+00:00",
+      "bytes": 5811
+    },
+    {
+      "sqcand": "280002539826",
+      "name": "ZEMA",
+      "url": "/candidate-photos/280002539826.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002539826.jpeg",
+      "sha256": "fc97655cd0b57cc0ef26e1d8d462d713fa7f03c6dbbb9c4b1122a299c7997bd7",
+      "received": "2026-10-04T20:15:05.950543+00:00",
+      "bytes": 5199
+    },
+    {
+      "sqcand": "280002538811",
+      "name": "SAMARA",
+      "url": "/candidate-photos/280002538811.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002538811.jpeg",
+      "sha256": "b13dca46d5d4774454739843b98b7f8624ab87b1a7c6ee1822f36407f1d74a5a",
+      "received": "2026-10-04T20:15:13.420179+00:00",
+      "bytes": 5488
+    },
+    {
+      "sqcand": "280002548139",
+      "name": "VETERINÁRIO WILSON GRASSI",
+      "url": "/candidate-photos/280002548139.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002548139.jpeg",
+      "sha256": "168a1962a15280e51073fe66964e919245f62fee5851c1444218fc2018fc52d0",
+      "received": "2026-10-04T20:15:13.483023+00:00",
+      "bytes": 4335
+    },
+    {
+      "sqcand": "280002540694",
+      "name": "RENAN SANTOS",
+      "url": "/candidate-photos/280002540694.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002540694.jpeg",
+      "sha256": "01a62ed37689df62223af5bc440e81db3aea8b1d10c2dfb2d8d4a82779822340",
+      "received": "2026-10-04T20:15:13.491482+00:00",
+      "bytes": 5290
+    },
+    {
+      "sqcand": "280002552487",
+      "name": "RUI COSTA PIMENTA",
+      "url": "/candidate-photos/280002552487.jpeg",
+      "source": "https://resultados.tse.jus.br/oficial/ele2026/6257/fotos/br/280002552487.jpeg",
+      "sha256": "34044976afeb1e6edcafa548b2c9a9c9bf855dec125d39a675ab24a4a0d9b590",
+      "received": "2026-10-04T20:15:13.400558+00:00",
+      "bytes": 6461
+    }
+  ]
+}

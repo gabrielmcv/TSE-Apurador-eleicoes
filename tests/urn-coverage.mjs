@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import fs from 'node:fs';import ts from 'typescript';import {DatabaseSync} from 'node:sqlite';
+const compile=path=>ts.transpileModule(fs.readFileSync(path,'utf8'),{compilerOptions:{target:ts.ScriptTarget.ES2022,module:ts.ModuleKind.ESNext}}).outputText;
+const url=s=>'data:text/javascript;base64,'+Buffer.from(s).toString('base64');const tse=url(compile('lib/tse.ts'));
+const {urnCoverage,coverageQuery}=await import(url(compile('lib/urn-coverage.ts').replace("'./tse'",JSON.stringify(tse))));
+const db=new DatabaseSync(':memory:');db.exec('CREATE TABLE snapshots(id INTEGER, uf TEXT, cargo TEXT, generation_ms INTEGER, normalized TEXT, received TEXT)');const insert=db.prepare('INSERT INTO snapshots VALUES(?,?,?,?,?,?)');
+insert.run(1,'SP','1',200,JSON.stringify({progress:62.5,sections:625,totalSections:1000,generated:'04/10/2026 18:00:00'}),'2026-10-04T21:00:01Z');
+insert.run(2,'SP','1',100,JSON.stringify({progress:40,sections:400,totalSections:1000}),'2026-10-04T21:00:02Z');
+insert.run(3,'SP','3',300,JSON.stringify({progress:90}),'2026-10-04T21:00:03Z');
+insert.run(4,'AC','1',200,JSON.stringify({progress:0,sections:0,totalSections:100}),'2026-10-04T21:00:01Z');
+const states=urnCoverage(db.prepare(coverageQuery).all());assert.equal(states.length,27);assert.equal(states.find(s=>s.uf==='SP').progress,62.5);assert.equal(states.find(s=>s.uf==='SP').received,'2026-10-04T21:00:01Z');assert.equal(states.find(s=>s.uf==='AC').progress,0);assert.equal(states.find(s=>s.uf==='ES').progress,null);assert.ok(states.every(s=>s.name));
+const {panelView}=await import(url(compile('lib/panel-view.ts').replace("'./tse'",JSON.stringify(tse))));for(const tab of ['auditoria','historico','logs','urnas'])assert.equal(panelView({aba:tab}).menu,tab);assert.equal(panelView({aba:'exterior',uf:'BR',cargo:'5'}).uf,'ZZ');assert.equal(panelView({aba:'exterior',cargo:'5'}).cargo,'1');
+console.log('PASS: 27 UFs, newest TSE generation, exact official percentage, timestamps, missing data distinct from 0%, separate query views.');
