@@ -1,3 +1,4 @@
+import {collectOpinionEvidence,readOpinion,publishOpinion,opinionOwner,opinionSchema} from '../../lib/ai-opinion';
 import {z} from 'zod/v4';
 import {latest} from '../../lib/archive';
 import {withCandidatePhotos} from '../../lib/photos';
@@ -23,6 +24,9 @@ const electionArg={eleicao:z.enum(['2026-1','2026-2']).default('2026-1')};
 const scope={...electionArg,uf,cargo};
 const cursor={before:positive.optional()};
 const tools=[
+ {name:'consultar_parecer_ia',description:'Último parecer de IA publicado, evidências, horário e hash. Leitura pública; análise limitada ao acervo, sem certificação forense.',schema:z.object({}).strict(),handler:null,path:''},
+ {name:'consultar_evidencias_parecer',description:'Proprietário autenticado: recalcula evidências matemáticas, cobertura, cronologia, erros HTTP, amostra de hashes e comparação em pares municipais concluídos. Não altera resultados eleitorais.',schema:z.object({}).strict(),handler:null,path:''},
+ {name:'publicar_parecer_ia',description:'Proprietário autenticado: publica uma análise de IA versionada, vinculada ao hash de evidências coletadas há menos de uma hora. Não modifica votos nem coleta. Conclusão deve distinguir achados, hipóteses, fontes e limites.',schema:opinionSchema,handler:null,path:''},
  {name:'consultar_resultados',description:'Último resultado arquivado do TSE por UF e cargo. BR presidencial inclui exterior. Cargos: 1 presidente, 3 governador, 5 senador, 6 deputado federal, 7 estadual, 8 distrital. Retorna fonte, horários e metadados disponíveis.',schema:z.object(scope).strict(),handler:results,path:'/api/resultados'},
  {name:'consultar_historico',description:'Versões arquivadas, paginadas pelo cursor before. id consulta uma versão; original=true inclui a resposta original e hash. exterior=false exclui exterior do total presidencial BR.',schema:z.object({...scope,...cursor,id:positive.optional(),original:z.boolean().optional(),exterior:z.boolean().optional()}).strict(),handler:history,path:'/api/historico'},
  {name:'consultar_alteracoes',description:'Alterações de totais entre capturas, inclusive reduções e geração anterior. candidate filtra identificador; alerts filtra alertas. Consulta factual, sem inferir fraude.',schema:z.object({...scope,...cursor,candidate:z.string().max(80).optional(),alerts:z.boolean().optional(),exterior:z.boolean().optional()}).strict(),handler:audit,path:'/api/auditoria'},
@@ -39,19 +43,22 @@ export async function POST(request:Request){
  if(!msg||Array.isArray(msg)||msg.jsonrpc!=='2.0'||typeof msg.method!=='string')return error(-32600,'Requisição JSON-RPC inválida');
  if(msg.method==='notifications/initialized'||(msg.id===undefined&&msg.method.startsWith('notifications/')))return new Response(null,{status:202});
  if(msg.id===undefined)return error(-32600,'ID obrigatório');
- if(msg.method==='initialize')return respond({protocolVersion:['2024-11-05','2025-03-26','2025-06-18'].includes(msg.params?.protocolVersion)?msg.params.protocolVersion:'2025-03-26',capabilities:{tools:{listChanged:false}},serverInfo:{name:'apuracao-tse',version:'1.0.0'},instructions:'Dados públicos arquivados do TSE. Apenas leitura. Preserve fonte, horário de geração e recebimento; não confunda ausência de dados com zero votos. Hash verifica integridade da cópia, não assinatura do TSE.'});
+ if(msg.method==='initialize')return respond({protocolVersion:['2024-11-05','2025-03-26','2025-06-18'].includes(msg.params?.protocolVersion)?msg.params.protocolVersion:'2025-03-26',capabilities:{tools:{listChanged:false}},serverInfo:{name:'apuracao-tse',version:'1.0.0'},instructions:'Dados públicos arquivados do TSE. Consultas de leitura; publicação do Parecer de IA restrita ao proprietário autenticado. Preserve fonte, horário de geração e recebimento; não confunda ausência de dados com zero votos. Hash verifica integridade da cópia, não assinatura do TSE.'});
  if(msg.method==='ping')return respond({});
- if(msg.method==='tools/list')return respond({tools:tools.map(t=>({name:t.name,description:t.description,inputSchema:z.toJSONSchema(t.schema,{target:'draft-7'}),annotations:{readOnlyHint:true,destructiveHint:false,idempotentHint:true,openWorldHint:false}}))});
+ if(msg.method==='tools/list')return respond({tools:tools.map(t=>({name:t.name,description:t.description,inputSchema:z.toJSONSchema(t.schema,{target:'draft-7'}),annotations:{readOnlyHint:t.name!=='publicar_parecer_ia',destructiveHint:false,idempotentHint:t.name!=='publicar_parecer_ia',openWorldHint:false}}))});
  if(msg.method!=='tools/call')return error(-32601,'Método não suportado');
  const tool=tools.find(t=>t.name===msg.params?.name);if(!tool)return error(-32602,'Ferramenta desconhecida');
  const parsed=tool.schema.safeParse(msg.params?.arguments??{});if(!parsed.success)return error(-32602,'Argumentos inválidos: '+parsed.error.issues.map(i=>`${i.path.join('.')}: ${i.message}`).join('; '));
  try{
-  if(parsed.data.eleicao==='2026-2'){if(!env.DB)throw Error('Armazenamento indisponível');await initializeSecondStorage(env.DB);}
-  const context=parsed.data.eleicao==='2026-2'?await loadSecondContext():firstElection;
+  if(tool.name==='consultar_parecer_ia')return respond({content:[{type:'text',text:JSON.stringify(await readOpinion())}]});
+  if(tool.name==='consultar_evidencias_parecer'){if(!await opinionOwner(request.headers))throw Error('Acesso restrito ao proprietário.');return respond({content:[{type:'text',text:JSON.stringify(await collectOpinionEvidence())}]});}
+  if(tool.name==='publicar_parecer_ia')return respond({content:[{type:'text',text:JSON.stringify(await publishOpinion(parsed.data,request.headers))}]});
+  if((parsed.data as any).eleicao==='2026-2'){if(!env.DB)throw Error('Armazenamento indisponível');await initializeSecondStorage(env.DB);}
+  const context=(parsed.data as any).eleicao==='2026-2'?await loadSecondContext():firstElection;
   return await runElection(context,async()=>{let data:unknown,isError=false;
   if(!tool.handler)data={election:electionInfo(),...await exportStatus()};
   else {const url=new URL(tool.path,request.url);for(const [key,value]of Object.entries(parsed.data)){if(key==='eleicao')continue;if(key==='original'){if(value)url.searchParams.set('download','1');}else url.searchParams.set(key,typeof value==='boolean'?(value?'1':'0'):String(value));}const response=await tool.handler(new Request(url));isError=!response.ok;data=await response.json();}
   return respond({content:[{type:'text',text:JSON.stringify(data)}],isError});});
- }catch{return respond({content:[{type:'text',text:'Consulta indisponível. Tente novamente; nenhum dado foi modificado.'}],isError:true});}
+ }catch(e){console.error('MCP operation failed',e);return respond({content:[{type:'text',text:e instanceof Error?e.message.slice(0,700):'Operação temporariamente indisponível.'}],isError:true});}
 }
 export function GET(){return new Response(null,{status:405,headers:{Allow:'POST','Cache-Control':'no-store'}});}

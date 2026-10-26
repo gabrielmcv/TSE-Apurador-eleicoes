@@ -16,13 +16,16 @@ Esta versão substitui a aplicação PHP antiga. O histórico anterior permanece
 - Mapa presidencial colorido pela liderança municipal; interação por estado e lista municipal do candidato ordenada por percentual decrescente, com votos como desempate.
 - Arquivamento de BU, RDV, imagens, logs e demais arquivos anunciados nos índices oficiais, com filas persistentes e novas tentativas.
 - Seção de exportação com quantidade de arquivos e tamanho total. A geração do ZIP64 é bloqueada enquanto a coleta não cumprir os critérios de conclusão.
-- MCP de consulta, metadados SEO, sitemap, robots.txt e llms.txt.
+- Auditoria comparativa dos turnos, com mapa municipal, ranking ordenável, filtros fixos e identificação de bases ainda incompletas.
+- Parecer de IA versionado, com fontes, métricas reproduzíveis, hashes, limites e questões para investigação. Seu conteúdo publicado é entregue no HTML inicial e atualizado pelo cliente.
+- Metadados por página e turno, dados estruturados, 16 imagens Open Graph de 1200 × 630, Twitter Cards, sitemap, robots.txt e guia textual llms.txt.
+- Consultas MCP públicas e publicação autenticada do parecer pelo proprietário.
 
 ## Turnos e coleta
 
 O primeiro turno está identificado como **1º turno - 2026**. A coleta de resultados está encerrada; o arquivamento de arquivos de urnas possui controle separado e pode continuar após a totalização dos votos.
 
-O segundo turno está preparado para iniciar consultas em **25/10/2026 às 15h de Brasília**, em acervo separado. O coletor aguarda a configuração oficial do pleito; não reutiliza resultados do primeiro turno. A programação da tarefa na hospedagem é uma configuração externa ao Git e precisa ser recriada em outra implantação.
+O segundo turno de **25/10/2026** utiliza acervo separado, com configuração própria do pleito. A cobertura municipal e o recebimento dos arquivos de urna são acompanhados separadamente; ter um arquivo recebido não significa ter todas as seções totalizadas. A programação das tarefas na hospedagem é externa ao Git e precisa ser recriada em outra implantação.
 
 Com o painel aberto, os coletores habilitados executam ciclos frequentes. Sem navegador, uma tarefa da hospedagem chama o endpoint autenticado `/api/coleta/automatica` em lotes horários, por até dez minutos por execução. Isso não equivale a um serviço permanente de atualização em segundos.
 
@@ -98,8 +101,11 @@ No ChatGPT, abra **Plugins → Personal → Created by you** para instalar/conec
 | `consultar_urnas` | Inventário territorial, cobertura e pendências |
 | `consultar_logs` | Tentativas de coleta e metadados |
 | `consultar_acervo` | Eleição, quantidade, tamanho e situação do ZIP |
+| `consultar_parecer_ia` | Parecer publicado, versão, evidências e horários |
+| `consultar_evidencias_parecer` | Recálculo das métricas, restrito ao proprietário |
+| `publicar_parecer_ia` | Publicação versionada, restrita ao proprietário autenticado |
 
-Use `eleicao="2026-1"` ou `eleicao="2026-2"`. As ferramentas são somente leitura: não alteram registros nem iniciam downloads.
+Use `eleicao="2026-1"` ou `eleicao="2026-2"`. As consultas de resultados e do acervo são de leitura. O proprietário autenticado também pode recalcular evidências e publicar o parecer de IA; isso não modifica votos ou os documentos originais.
 
 Exemplos de perguntas:
 
@@ -118,9 +124,22 @@ O TSE publica totais acumulados. A coleta não garante todas as versões interme
 
 Brasil presidencial já inclui exterior; não some BR e ZZ. Municípios sem captura permanecem sem dados, sem preenchimento pelos totais estaduais. Diferenças ou reduções entre versões não constituem, por si só, evidência de fraude.
 
+## Comparativo e parecer de IA
+
+A página `/comparativo` compara a quantidade de votos, crescimento percentual e participação em pontos percentuais. A intensidade do mapa usa escala logarítmica. Dados incompletos são identificados e não devem ser tratados como perdas reais de votos. O rodapé fixo facilita a troca de candidato, estado e métrica.
+
+O parecer é uma análise assistida por IA, vinculada a uma versão de evidências. Não é laudo oficial ou auditoria forense. A consistência das somas, o comportamento político e as condições de votação têm limites de verificação próprios; o texto distingue constatações, interpretações e pendências. Os dados e o parecer publicados ficam no armazenamento de produção, não neste repositório.
+
 ## Validação
 
-A versão publicada passou pelo build de produção. `tests/` reúne verificações de normalização, histórico, isolamento e comportamento de componentes/filas. A disponibilidade do TSE, a conexão OAuth e o agendador também dependem da infraestrutura de implantação; o build não valida esses serviços externos.
+A versão sincronizada corresponde ao código publicado no site, incluindo SEO, imagens de compartilhamento e melhorias de interface. Passou pelo build de produção, pela verificação TypeScript e pelos testes específicos de SEO. Os 16 endereços canônicos e suas imagens também foram conferidos em produção.
+
+```sh
+node tests/seo.mjs
+```
+
+As imagens sociais podem ser regeneradas com `node scripts/generate-og.mjs`, usando o renderizador Sharp instalado com as dependências do projeto.
+ `tests/` reúne verificações de normalização, histórico, isolamento e comportamento de componentes/filas. A disponibilidade do TSE, a conexão OAuth e o agendador também dependem da infraestrutura de implantação; o build não valida esses serviços externos.
 
 ## Licença
 

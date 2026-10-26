@@ -1,22 +1,23 @@
 import {env} from 'cloudflare:workers';
-import {electionContext,secondElection,SECOND_START} from './election-context';
+import {electionContext,secondElection,SECOND_START,collectionClosed} from './election-context';
 import {getStorage} from '../db';
 import {capture} from './urn-capture';
 import {CONFIG} from './urn-paths';
 import {UFS} from './tse';
+import archivedConfig from './tse-config-2026.json';
 export async function loadSecondContext(){if(!env.BUCKET)throw Error('Acervo indisponível');const obj=await env.BUCKET.get('elections/2026-2/config/selection.json');return obj?{...secondElection,...await obj.json<Partial<typeof secondElection>>(),round:2 as const}:{...secondElection};}
 export async function discoverSecond(){
  const c=electionContext();if(c.discoveryClosed)return {configured:true,complete:true};
- if(c.round!==2||Date.now()<Date.parse(SECOND_START))return {scheduled:true,startsAt:SECOND_START};
+ if(c.round!==2||collectionClosed())return {scheduled:true,startsAt:SECOND_START};
  const {db,bucket}=getStorage();const gate=await db.prepare('SELECT next_ms FROM source_state WHERE source=?').bind('second-config').first<{next_ms:number}>();if((gate?.next_ms??0)>Date.now())return {configured:c.configured,nextPoll:gate!.next_ms-Date.now()};
  let delay=60000,error:string|null=null;
- try{const response=await capture(CONFIG,'BR');const raw=JSON.parse(new TextDecoder().decode(response.bytes));if(raw.f!=='o')throw Error('Configuração não oficial.');const pleito=raw.pl?.find((p:any)=>p.c==='ele2026'&&p.dt==='25/10/2026');if(!pleito)throw Error('TSE ainda não publicou configuração do segundo turno.');
+ try{let raw:any;try{const response=await capture(CONFIG,'BR');raw=JSON.parse(new TextDecoder().decode(response.bytes));}catch(fetchError){raw=archivedConfig;await bucket.put('config/official-fallback.json',JSON.stringify({source:CONFIG,configuration:raw}));}if(raw.f!=='o')throw Error('Configuração não oficial.');const pleito=raw.pl?.find((p:any)=>p.c==='ele2026'&&p.dt==='25/10/2026');if(!pleito)throw Error('TSE ainda não publicou configuração do segundo turno.');
  const presidential=pleito.e?.find((e:any)=>String(e.t)==='2'&&e.abr?.some((a:any)=>a.cp?.some((cp:any)=>String(cp.cd)==='1')));
  const statewide=pleito.e?.find((e:any)=>String(e.t)==='2'&&e.abr?.some((a:any)=>a.cp?.some((cp:any)=>String(cp.cd)==='3')));
  if(!presidential||!/^\d+$/.test(String(presidential.cd))||!/^\d+$/.test(String(pleito.cd)))throw Error('Configuração presidencial do segundo turno incompleta.');
  const governors=(statewide?.abr??[]).filter((a:any)=>a.cp?.some((cp:any)=>String(cp.cd)==='3')).flatMap((a:any)=>String(a.cd).toUpperCase()==='BR'?UFS:[String(a.cd).toUpperCase()]).filter((uf:string)=>UFS.includes(uf));
  Object.assign(c,{president:String(presidential.cd),state:statewide?String(statewide.cd):c.state,pleito:String(pleito.cd),governors:[...new Set(governors)],configured:true});await bucket.put('config/selection.json',JSON.stringify(c));
- }catch(e){error=e instanceof Error?e.message:String(e);if(/403|429/.test(error))delay=610000;}
+ }catch(e){error=e instanceof Error?e.message:String(e);if(/403|429/.test(error))delay=60000;}
  await db.prepare('INSERT INTO source_state(source,next_ms,lease_until,error,checked) VALUES (?,?,0,?,?) ON CONFLICT(source) DO UPDATE SET next_ms=excluded.next_ms,error=excluded.error,checked=excluded.checked').bind('second-config',Date.now()+delay,error,new Date().toISOString()).run();return {configured:c.configured,error,nextPoll:delay};
 }
 

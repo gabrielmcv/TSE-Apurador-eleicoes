@@ -10,10 +10,13 @@ const labels:Record<string,string>={base:'Primeira observação',aumento:'Aument
 const fmt=(n:number|null)=>n===null?'Ausente':n.toLocaleString('pt-BR');
 
 export default function Audit({uf,cargo,includeExterior=true,candidates,version,selectedCandidate}:{uf:string;cargo:string;includeExterior?:boolean;candidates:Candidate[];version?:number;selectedCandidate?:string}){
+ const [refreshTick,setRefreshTick]=useState(0);
+ useEffect(()=>{const refresh=()=>setRefreshTick(value=>value+1);const timer=setInterval(refresh,60000);const visible=()=>{if(document.visibilityState==='visible')refresh();};document.addEventListener('visibilitychange',visible);return()=>{clearInterval(timer);document.removeEventListener('visibilitychange',visible);};},[]);
+ const refreshVersion=(version??0)+refreshTick;
  const [rows,setRows]=useState<any[]>([]),[auditCandidate,setAuditCandidate]=useState(selectedCandidate??''),[selectedCandidates,setSelectedCandidates]=useState<string[]>([]),[alerts,setAlerts]=useState(false),[next,setNext]=useState<number|null>(null),[error,setError]=useState('');
  const url=`/api/auditoria?uf=${uf}&cargo=${cargo}&exterior=${includeExterior?1:0}&candidate=${encodeURIComponent(auditCandidate)}&alerts=${alerts?'1':'0'}`;
  useEffect(()=>{setSelectedCandidates(selectedCandidate?[selectedCandidate]:[]);setAuditCandidate(selectedCandidate??'');},[uf,cargo,includeExterior,selectedCandidate]);
- useEffect(()=>{let active=true;const controller=new AbortController();async function refresh(){try{const r=await roundFetch(url,{cache:'no-store',signal:controller.signal});const d:any=await r.json();if(!r.ok)throw Error(d.error);if(active){setRows(d.records);setNext(d.next);setError('');}}catch(e){if(active)setError(e instanceof Error?e.message:'Falha na auditoria');}}refresh();return()=>{active=false;controller.abort();};},[url,version]);
+ useEffect(()=>{let active=true;const controller=new AbortController();async function refresh(){try{const r=await roundFetch(url,{cache:'no-store',signal:controller.signal});const d:any=await r.json();if(!r.ok)throw Error(d.error);if(active){setRows(d.records);setNext(d.next);setError('');}}catch(e){if(active)setError(e instanceof Error?e.message:'Falha na auditoria');}}refresh();return()=>{active=false;controller.abort();};},[url,refreshVersion]);
  const candidateOptions=useMemo<AuditChartCandidate[]>(()=>Array.from(new Map([...rows.filter(r=>r.candidate).map(r=>({id:String(r.candidate),name:String(r.name)})),...candidates.map(c=>({id:c.id,name:c.name}))].map(c=>[c.id,c])).values()),[rows,candidates]);
  const selectedChartCandidates=useMemo(()=>candidateOptions.filter(candidate=>selectedCandidates.includes(candidate.id)),[candidateOptions,selectedCandidates]);
  function toggleCandidate(candidateId:string){setSelectedCandidates(current=>current.includes(candidateId)?current.filter(id=>id!==candidateId):[...current,candidateId]);}
@@ -22,9 +25,9 @@ export default function Audit({uf,cargo,includeExterior=true,candidates,version,
   <section className="panel audit-graph-section" aria-labelledby="audit-chart-section-title">
    <div className="panel-title"><div><span className="eyebrow">VISUALIZAÇÃO DO HISTÓRICO</span><h2 id="audit-chart-section-title">Candidatos e gráfico</h2></div></div>
    <div className="audit-controls"><fieldset className="candidate-checklist"><legend>Candidatos no gráfico</legend><div className="candidate-checklist-grid">{candidateOptions.map(candidate=><label key={candidate.id} className="candidate-check"><input type="checkbox" checked={selectedCandidates.includes(candidate.id)} onChange={()=>toggleCandidate(candidate.id)}/><span aria-hidden="true"/><strong>{candidate.name}</strong></label>)}</div></fieldset></div>
-   <AuditChart includeExterior={includeExterior} uf={uf} cargo={cargo} candidates={selectedChartCandidates} version={version}/>
+   <AuditChart includeExterior={includeExterior} uf={uf} cargo={cargo} candidates={selectedChartCandidates} version={refreshVersion}/>
   </section>
-  {cargo==='1'?<PresidentialMap version={version}/>:null}
+  {cargo==='1'?<PresidentialMap version={refreshVersion}/>:null}
   <section className="panel history audit-events-section" aria-labelledby="audit-events-title">
    <div className="panel-title"><div><span className="eyebrow">AUDITORIA PERSISTENTE</span><h2 id="audit-events-title">Quando os totais mudaram</h2></div><a href={url} target="_blank" rel="noreferrer">Consultar JSON</a></div>
    <p className="history-help">Comparações entre versões recebidas desde a ativação desta auditoria. Uma redução é uma alteração observada, não comprovação de fraude. O horário de recebimento é do site; geração e totalização são horários informados pelo TSE. Respostas antigas geram alerta sem substituir o resultado atual.</p>

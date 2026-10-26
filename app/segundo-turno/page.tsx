@@ -1,5 +1,8 @@
-import type {Metadata} from 'next';
-export const metadata:Metadata={title:'Segundo turno: apuração para presidente e governadores',description:'Apuração do segundo turno das eleições 2026, em 25 de outubro. Histórico, exterior e arquivos de urnas em acervo independente.',alternates:{canonical:'https://eleicoes.3ree.org/segundo-turno'},openGraph:{url:'https://eleicoes.3ree.org/segundo-turno',title:'Segundo turno — Eleições 2026'}};
-import Home from '../page';
+import {pageMetadata,publicPages} from '../../lib/seo';
+import PageSchema from '../PageSchema';
+export const metadata=pageMetadata(publicPages.second);
+import PresidentialHome from '../PresidentialHome';
+import {homeData} from '../../lib/home-data';
 import RoundProvider from '../RoundProvider';
-export default function SecondHome(){return <RoundProvider><Home/></RoundProvider>;}
+export const dynamic='force-dynamic';
+export default async function SecondHome(){return <RoundProvider><PageSchema page={publicPages.second}/><PresidentialHome initialData={await homeData()}/></RoundProvider>;}

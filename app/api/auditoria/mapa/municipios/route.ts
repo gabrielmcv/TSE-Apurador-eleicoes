@@ -7,7 +7,7 @@ export async function GET(request:Request){
  if(!UFS.includes(uf)||!candidate||candidate.length>80)return Response.json({error:'Estado ou candidato inválido.'},{status:400});
  try{
   const {db}=getStorage();
-  const records=await db.prepare(`SELECT j.ibge,s.id snapshotId,s.generated,s.received,s.hash,
+  const records=await db.prepare(`SELECT j.ibge,s.id snapshotId,s.generated,s.received,s.hash,CAST(json_extract(s.normalized,'$.progress') AS REAL) progress,
    CAST(json_extract(c.value,'$.votes') AS INTEGER) votes,
    CAST(json_extract(c.value,'$.percent') AS REAL) percent
    FROM municipal_jobs j JOIN municipal_snapshots s ON s.id=j.snapshot_id

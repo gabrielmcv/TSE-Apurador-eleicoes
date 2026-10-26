@@ -1,5 +1,6 @@
-import {electionContext} from './election-context';
-import {urnRetry,urnClaimQuery,urnRetryClaimQuery} from './urn-retry';
+import {tsePause,TsePausedError} from './tse-backoff';
+import {electionContext,internationalOnly} from './election-context';
+import {urnRetry,urnClaimQuery,urnRetryClaimQuery,urnRepairPauseQuery} from './urn-retry';
 import {getStorage} from '../db';
 import {UFS} from './tse';
 import {CONFIG,paths,sectionUrl,filesFromAux,digits} from './urn-paths';
@@ -8,7 +9,10 @@ async function enqueue(key:string,kind:string,uf:string,source:string|null,paylo
 export async function seed(){await enqueue(`config-2026-${electionContext().round}`,'config','BR',CONFIG,{});}
 export async function tick(retryTurn=false){
  const {db,bucket}=getStorage();
- const job=await db.prepare(retryTurn?urnRetryClaimQuery:urnClaimQuery).bind(Date.now()+60000,new Date().toISOString(),Date.now(),Date.now()).first<any>();
+ const pause=await tsePause();
+ await db.prepare(urnRepairPauseQuery).bind(Date.now()+pause).run();
+ if(pause>0)return {processed:false,pauseMs:pause};
+ const job=await db.prepare((retryTurn?urnRetryClaimQuery:urnClaimQuery).replace('WHERE ((state',internationalOnly()?"WHERE (uf='ZZ' OR kind='config') AND ((state":'WHERE ((state')).bind(Date.now()+60000,new Date().toISOString(),Date.now(),Date.now()).first<any>();
  if(!job)return {processed:false};
  let payload=JSON.parse(job.payload),reschedule=0,capturedLogId:number|undefined;
  try{
@@ -30,7 +34,7 @@ export async function tick(retryTurn=false){
  }else{
  const raw=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(response.bytes));
  if(job.kind==='config'){
- for(const uf of [...UFS,'ZZ']){const p=paths(raw,uf);await enqueue(`index:${p.index}`,'index',uf,p.index,p);}reschedule=electionContext().round===2&&!electionContext().discoveryClosed?300000:0;
+ for(const uf of (internationalOnly()?['ZZ']:[...UFS,'ZZ'])){const p=paths(raw,uf);await enqueue(`index:${p.index}`,'index',uf,p.index,p);}reschedule=electionContext().round===2&&!electionContext().discoveryClosed?300000:0;
  }else if(job.kind==='index'){
  if(raw.f!=='o'||String(raw.cdp)!==payload.pleito||!Array.isArray(raw.abr)||!raw.abr.some((a:any)=>String(a.cd).toUpperCase()===job.uf))throw Error('EA16 não corresponde ao pleito e abrangência.');
  await enqueue(`import:${job.uf}:${response.hash}`,'import',job.uf,null,{...payload,key:response.key,offset:0});reschedule=electionContext().round===2&&!electionContext().discoveryClosed?60000:0;
@@ -42,5 +46,5 @@ export async function tick(retryTurn=false){
  }
  }
  await db.prepare('UPDATE urn_jobs SET state=?,lease_until=0,next_ms=?,payload=?,error=NULL,updated=? WHERE id=?').bind(reschedule?'pending':'done',Date.now()+reschedule,JSON.stringify(payload),new Date().toISOString(),job.id).run();return {processed:true,kind:job.kind,id:job.id};
- }catch(err){if(capturedLogId)await db.prepare('UPDATE collection_logs SET state=?,error=? WHERE id=?').bind('nao_publicado',err instanceof Error?err.message:String(err),capturedLogId).run();const http=(err as any)?.http,{delay,pauseMs}=urnRetry(http,job.attempts);await db.prepare("UPDATE urn_jobs SET state='retry',lease_until=0,next_ms=?,error=?,updated=? WHERE id=?").bind(Date.now()+delay,err instanceof Error?err.message:String(err),new Date().toISOString(),job.id).run();return {processed:true,id:job.id,pauseMs,error:err instanceof Error?err.message:String(err)};}
+ }catch(err){if(err instanceof TsePausedError){const pauseMs=Math.max(1000,err.retryAt-Date.now());await db.prepare("UPDATE urn_jobs SET state='pending',lease_until=0,next_ms=?,attempts=MAX(0,attempts-1),error=NULL WHERE id=?").bind(err.retryAt,job.id).run();return {processed:false,id:job.id,pauseMs};}if(capturedLogId)await db.prepare('UPDATE collection_logs SET state=?,error=? WHERE id=?').bind('nao_publicado',err instanceof Error?err.message:String(err),capturedLogId).run();const http=(err as any)?.http,{delay,pauseMs}=urnRetry(http,job.attempts);await db.prepare("UPDATE urn_jobs SET state='retry',lease_until=0,next_ms=?,error=?,updated=? WHERE id=?").bind(Date.now()+delay,err instanceof Error?err.message:String(err),new Date().toISOString(),job.id).run();return {processed:true,id:job.id,pauseMs,error:err instanceof Error?err.message:String(err)};}
 }

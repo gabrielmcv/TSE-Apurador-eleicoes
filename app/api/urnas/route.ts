@@ -1,3 +1,4 @@
+import {tsePause} from '../../../lib/tse-backoff';
 import {prepareExport} from '../../../lib/archive-export';
 import {collectionClosed,urnCollectionClosed,electionInfo,electionContext} from '../../../lib/election-context';
 import {urnFailuresQuery} from '../../../lib/urn-retry';
@@ -26,5 +27,6 @@ export async function GET(request:Request){
  const logs=await db.prepare("SELECT id,source,started,received,finished,state,http,error FROM collection_logs WHERE cargo='urna' AND uf=? ORDER BY id DESC LIMIT 20").bind(uf).all();
  const scopedSaved=await db.prepare(`SELECT count(*) AS n,COALESCE(sum(size),0) AS bytes FROM urn_files WHERE ${where.join(' AND ')} AND state='saved'`).bind(...values).first();const availableScopes=await db.prepare("SELECT uf,count(*) AS listed,sum(CASE WHEN state='saved' THEN 1 ELSE 0 END) AS saved FROM urn_files GROUP BY uf ORDER BY uf").all();
  const failures=await db.prepare(urnFailuresQuery).all();
- return Response.json({failures:urnCollectionClosed()?[]:failures.results,municipalities:municipalities.results,zones:zones.results,sections:sections.results,files:files.results.slice(0,50),next:files.results.length>50?(files.results[49] as any).id:null,queue:counts.results,saved,scopedSaved,availableScopes:availableScopes.results,collectionClosed:urnCollectionClosed(),logs:logs.results},{headers:{'Cache-Control':'no-store'}});
+ const pause=urnCollectionClosed()?0:await tsePause();
+ return Response.json({retryAt:pause?Date.now()+pause:null,failures:urnCollectionClosed()?[]:failures.results,municipalities:municipalities.results,zones:zones.results,sections:sections.results,files:files.results.slice(0,50),next:files.results.length>50?(files.results[49] as any).id:null,queue:counts.results,saved,scopedSaved,availableScopes:availableScopes.results,collectionClosed:urnCollectionClosed(),logs:logs.results},{headers:{'Cache-Control':'no-store'}});
  }catch(e){console.error(e);return Response.json({error:'Arquivo de urnas indisponível.'},{status:503});}}
